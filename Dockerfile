@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm install --only=production
 
 COPY . .
 
@@ -12,5 +12,5 @@ EXPOSE 7554
 
 ENV NODE_ENV=production
 
-CMD ["npm", "start"]
+CMD ["node", "src/index.js"]
 
