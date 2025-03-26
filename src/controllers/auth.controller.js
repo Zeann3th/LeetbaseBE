@@ -22,8 +22,15 @@ const register = async (req, res) => {
       { email: { $eq: email } }
     ]
   });
+
   if (user) {
-    return res.status(409).json({ message: "User already exists" });
+    if (user.username === username) {
+      return res.status(409).json({ message: `User with username ${username} already exists` });
+    }
+
+    if (user.email === email) {
+      return res.status(418).json({ message: `User with email ${email} already exists` });
+    }
   }
 
   const hashedPassword = await bcrypt.hash(password, saltRounds);
