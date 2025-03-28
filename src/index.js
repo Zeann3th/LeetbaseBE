@@ -35,6 +35,12 @@ app.get("/healthz", (req, res) => {
   res.status(200).json({ message: "Server is Healthy" });
 });
 
+app.get("/csrf-token", (req, res) => {
+  const csrfToken = crypto.randomUUID();
+  res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction });
+  res.status(200).json({ csrfToken });
+});
+
 app.use("/v1", ipLimiter, router);
 
 mongoose.connect(process.env.MONGO_URI, {
