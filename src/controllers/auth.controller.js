@@ -58,7 +58,7 @@ const register = async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const verifyEmail = async (req, res) => {
   const pin = sanitize(req.body.pin, "string");
@@ -87,7 +87,7 @@ const verifyEmail = async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const resendEmail = async (req, res) => {
   let action = sanitize(req.body.action, "string");
@@ -111,7 +111,7 @@ const resendEmail = async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const login = async (req, res) => {
   const { username, email, password } = req.body;
@@ -155,15 +155,14 @@ const login = async (req, res) => {
 
     await user.updateOne({ refreshToken, isAuthenticated: true });
 
-    const cookieOptions = { httpOnly: true, secure: isProduction };
+    res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true, maxAge: 24 * 60 * 60 * 1000 });
+    res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
 
-    res.cookie("refresh_token", refreshToken, { ...cookieOptions, maxAge: 24 * 60 * 60 * 1000 });
-    res.cookie("_csrf", csrfToken, cookieOptions);
     return res.status(200).json({ accessToken, csrfToken });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const refresh = async (req, res) => {
   const refreshToken = req.cookies.refresh_token;
@@ -198,7 +197,7 @@ const refresh = async (req, res) => {
 
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const logout = async (req, res) => {
   const refreshToken = req.cookies.refresh_token;
@@ -212,12 +211,10 @@ const logout = async (req, res) => {
     await user.updateOne({ refreshToken: null, isAuthenticated: false });
   }
 
-  const cookieOptions = { httpOnly: true, secure: isProduction };
-
-  res.clearCookie("refresh_token", cookieOptions);
-  res.clearCookie("_csrf", cookieOptions);
+  res.clearCookie("refresh_token", { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
+  res.clearCookie("_csrf", { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
   return res.status(204).send();
-}
+};
 
 const forgotPassword = async (req, res) => {
   const email = sanitize(req.body.email, "email");
@@ -237,7 +234,7 @@ const forgotPassword = async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const resetPassword = async (req, res) => {
   const email = sanitize(req.body.email, "email");
@@ -264,12 +261,12 @@ const resetPassword = async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const redirectOAuth = async (req, res) => {
   const url = `https://github.com/login/oauth/authorize?client_id=${process.env.GH_CLIENT_ID}&scope=read:user%20user:email`;
   return res.redirect(url);
-}
+};
 
 const handleOAuthCallback = async (req, res) => {
   const code = sanitize(req.query.code, "string");
@@ -311,7 +308,7 @@ const handleOAuthCallback = async (req, res) => {
         email,
         isEmailVerified: true,
         isAuthenticated: true
-      })
+      });
       await User.create({
         _id: user._id,
         name: githubUser.name || githubUser.login,
@@ -326,16 +323,14 @@ const handleOAuthCallback = async (req, res) => {
 
     await user.updateOne({ refreshToken });
 
-    const cookieOptions = { httpOnly: true, secure: isProduction };
+    res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, maxAge: 24 * 60 * 60 * 1000, path: "/", partitioned: true, sameSite: "none" });
+    res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
 
-    res.cookie("refresh_token", refreshToken, { ...cookieOptions, maxAge: 24 * 60 * 60 * 1000 });
-    res.cookie("_csrf", csrfToken, cookieOptions);
-
-    return res.redirect(`http://localhost:3000?accessToken=${accessToken}&csrfToken=${csrfToken}`);
+    return res.redirect(`${process.env.APP_URL}?accessToken=${accessToken}&csrfToken=${csrfToken}`);
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const authController = {
   register,
@@ -348,6 +343,6 @@ const authController = {
   resetPassword,
   redirectOAuth,
   handleOAuthCallback
-}
+};
 
 export default authController;

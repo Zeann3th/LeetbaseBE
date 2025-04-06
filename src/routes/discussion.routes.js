@@ -3,18 +3,18 @@ import discussionController from "../controllers/discussion.controller.js";
 
 const router = Router();
 
-router.get("/", discussionController.getAll)
+router.get("/", discussionController.getAll);
 
-router.get("/search", discussionController.search)
+router.get("/search", discussionController.search);
 
-router.get("/:id", discussionController.getById)
+router.get("/:id", discussionController.getById);
 
-router.post("/:id/vote", discussionController.vote)
+router.post("/:id/vote", discussionController.vote);
 
-router.post("/", discussionController.create)
+router.post("/", discussionController.create);
 
-router.patch("/:id", discussionController.update)
+router.patch("/:id", discussionController.update);
 
-router.delete("/:id", discussionController.remove)
+router.delete("/:id", discussionController.remove);
 
 export { router as discussionRouter };

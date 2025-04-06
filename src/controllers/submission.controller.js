@@ -3,6 +3,7 @@ import { sanitize } from "../utils.js";
 import Problem from "../models/Problem.js";
 import s3 from "../services/storage.js";
 import Submission from "../models/Submission.js";
+import { commentMarkers } from "../config/markers.js";
 
 const getById = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
@@ -18,7 +19,7 @@ const getById = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 const create = async (req, res) => {
   const problemId = sanitize(req.body.problemId, "mongo");
@@ -32,7 +33,7 @@ const create = async (req, res) => {
   try {
     const [problem, template, languageVersion] = await Promise.all([
       Problem.findById(problemId),
-      s3.getDownloadUrl(`${problemId}/${language.toLowerCase()}`),
+      s3.getContent(`${problemId}/templates/${language.toLowerCase()}`),
       getLanguageVersion(language),
     ]);
 
@@ -48,7 +49,18 @@ const create = async (req, res) => {
       return res.status(404).json({ message: "Language version not found" });
     }
 
-    const submit = template.replace(/\/\/--code--/g, code);
+    const startMarker = commentMarkers[language].start;
+    const endMarker = commentMarkers[language].end;
+    const startIndex = template.indexOf(startMarker);
+    const endIndex = template.indexOf(endMarker);
+
+    if (startIndex === -1 || endIndex === -1 || startIndex >= endIndex) {
+      return res.status(400).json({ message: "Template markers not found" });
+    }
+
+    const submit = template.slice(0, startIndex + startMarker.length) +
+      "\n" + code + "\n" +
+      template.slice(endIndex);
 
     const options = {
       method: 'POST',
@@ -86,7 +98,7 @@ const create = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 const getLanguageVersion = async (language) => {
   try {
