@@ -32,7 +32,6 @@ tools = [Tool(function_declarations=[get_all_problems])]
 # Khởi tạo mô hình Gemini
 model = genai.GenerativeModel(model_name="gemini-2.0-flash", tools=tools)
 
-
 # Hàm xử lý api lấy toàn bộ câu hỏi
 def get_all_problems():
     base_url = os.getenv("BASE_URL", "http://localhost")
@@ -47,13 +46,11 @@ def get_all_problems():
     except requests.exceptions.RequestException as e:
         return {"status": "error", "message": str(e)}
 
-
 # Hàm xử lý function call
 def handle_function_call(function_call):
     if function_call.name == "get_all_problems":
         return get_all_problems()
     return {"status": "error", "message": "Không xác định được hàm."}
-
 
 # Hàm dùng để hỏi model
 async def ask_gemini_with_function_call(query: str, chat_history=None):
@@ -62,21 +59,12 @@ async def ask_gemini_with_function_call(query: str, chat_history=None):
 
         # Xây dựng lại messages theo định dạng Gemini
         if chat_history:
-            # messages = [{"role": "user", "parts": ["Bạn là một trợ lý ảo thông minh, thân thiện và nhiệt tình, có nhiệm vụ hỗ trợ người dùng trong quá trình luyện tập thuật toán và lập trình trên nền tảng web. Hãy trả lời ngắn gọn, dễ hiểu, dùng tiếng Việt và khuyến khích người học tiếp tục cải thiện kỹ năng."]}]
             for chat in chat_history:
                 role = "user" if chat["sender"] == "user" else "model"
                 messages.append({"role": role, "parts": [chat["message"]]})
             messages.append(user_prompt)
         else:
-            messages = [
-                # {
-                #     "role": "user",
-                #     "parts": [
-                #         "Bạn là một trợ lý ảo thông minh, thân thiện và nhiệt tình, có nhiệm vụ hỗ trợ người dùng trong quá trình luyện tập thuật toán và lập trình trên nền tảng web. Hãy trả lời ngắn gọn, dễ hiểu, dùng tiếng Việt và khuyến khích người học tiếp tục cải thiện kỹ năng."
-                #     ],
-                # },
-                user_prompt,
-            ]
+            messages = [user_prompt]
 
         # Gọi Gemini lần đầu
         response = model.generate_content(messages, stream=False)
@@ -96,23 +84,14 @@ async def ask_gemini_with_function_call(query: str, chat_history=None):
                 result = result["data"]
             else:
                 result = result["message"]
-            # Chuẩn bị messages mới để gửi lại cho Gemini, bao gồm cả phản hồi từ tool
+
+            # Chuẩn bị messages mới để gửi lại cho Gemini
             messages.append(
                 {
                     "role": "user",
-                    "parts": [str(result)],  # đảm bảo part là chuỗi
+                    "parts": [str(result)],
                 }
             )
-            print(messages)
-            # Gọi lại Gemini với kết quả từ function_call
-            # final_response = model.generate_content(messages, stream=False)
-
-            # return {
-            #     "function_call": function_call.name,
-            #     "args": function_call.args,
-            #     "result": result,
-            #     "final_response": final_response.text,
-            # }
 
             final_response = model.generate_content(messages, stream=False)
 
@@ -127,19 +106,10 @@ async def ask_gemini_with_function_call(query: str, chat_history=None):
 
         else:
             # Không cần gọi hàm nào, chỉ là trả lời bình thường
-            return {"function_call": None, "result": response.text}
+            return response.text
 
     except Exception as e:
         logger.error(f"Lỗi trong quá trình xử lý Gemini: {str(e)}")
         import traceback
-
         logger.error(traceback.format_exc())
         return {"error": str(e)}
-
-
-res = asyncio.run(
-    ask_gemini_with_function_call(
-        "Tôi mới bắt đầu học và muốn làm các bài dạng dễ trước, bạn có gợi ý gì không?"
-    )
-)
-print("Trả lời: ", res)

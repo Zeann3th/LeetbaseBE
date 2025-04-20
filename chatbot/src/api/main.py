@@ -1,17 +1,29 @@
-import sys
-import os
 from fastapi import FastAPI
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from .chat_routes import router as chat_router
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-from src.chat_handler import ask_gemini_with_function_call
+app = FastAPI(
+    title="Leetbase Chatbot API",
+    description="API for Leetbase's AI-powered chatbot",
+    version="1.0.0"
+)
 
-app = FastAPI()
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-class UserQuery(BaseModel):
-    text: str
+# Include routers
+app.include_router(chat_router)
 
-@app.post("/chat")
-def chat_with_bot(query: UserQuery):
-    result = ask_gemini_with_function_call(query.text)
-    return result
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to Leetbase Chatbot API",
+        "status": "active",
+        "version": "1.0.0"
+    }
