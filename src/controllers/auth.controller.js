@@ -48,13 +48,34 @@ const register = async (req, res) => {
         name: sanitize(name, "string") || "User" + crypto.randomUUID().slice(0, 5),
         avatar: sanitize(avatar, "url") || null
       });
+
+      const payload = { sub: auth._id, username: auth.username, role: auth.role, email: auth.email };
+
+      const accessToken = jwt.sign(
+        payload,
+        process.env.TOKEN_SECRET,
+        { expiresIn: "15m" }
+      );
+
+      const refreshToken = jwt.sign(
+        payload,
+        process.env.REFRESH_TOKEN_SECRET,
+        { expiresIn: "1d" }
+      );
+
+      const csrfToken = crypto.randomUUID();
+
+      await auth.updateOne({ refreshToken, isAuthenticated: true });
+
+      res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true, maxAge: 24 * 60 * 60 * 1000 });
+      res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
+
+      mail.sendVerifyEmail(email);
+      return res.status(201).json({ accessToken, csrfToken });
     } catch (err) {
       await Auth.findByIdAndDelete(auth._id);
       throw err;
     }
-
-    mail.sendVerifyEmail(email);
-    return res.status(201).json({ message: "User created successfully" });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
@@ -122,22 +143,22 @@ const login = async (req, res) => {
   }
 
   try {
-    const user = await Auth.findOne({
+    const auth = await Auth.findOne({
       $or: [
         { username: { $eq: identifier } },
         { email: { $eq: identifier } }
       ]
     });
-    if (!user) {
+    if (!auth) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, auth.password);
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const payload = { sub: user._id, username: user.username, role: user.role, email: user.email };
+    const payload = { sub: auth._id, username: auth.username, role: auth.role, email: auth.email };
 
     const accessToken = jwt.sign(
       payload,
@@ -153,7 +174,7 @@ const login = async (req, res) => {
 
     const csrfToken = crypto.randomUUID();
 
-    await user.updateOne({ refreshToken, isAuthenticated: true });
+    await auth.updateOne({ refreshToken, isAuthenticated: true });
 
     res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true, maxAge: 24 * 60 * 60 * 1000 });
     res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });

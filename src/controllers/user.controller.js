@@ -10,21 +10,30 @@ const getAll = async (req, res) => {
   const key = `users:${limit}:${page}`;
 
   try {
-    if (req.headers["Cache-Control"] !== "no-cache") {
+    if (req.headers["cache-control"] !== "no-cache") {
       const cachedUsers = await cache.get(key);
       if (cachedUsers) {
         return res.status(200).json(JSON.parse(cachedUsers));
       }
     }
 
-    const users = await User.find().limit(limit).skip((page - 1) * limit);
-    await cache.set(key, JSON.stringify(users), "EX", 600);
+    const [count, users] = await Promise.all([
+      User.countDocuments(),
+      User.find().limit(limit).skip(limit * (page - 1))
+    ]);
 
-    res.status(200).json(users);
+    const response = {
+      maxPage: Math.ceil(count / limit),
+      data: users,
+    };
+
+    await cache.set(key, JSON.stringify(response), "EX", 600);
+
+    res.status(200).json(response);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
+};
 
 const getById = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
@@ -35,7 +44,7 @@ const getById = async (req, res) => {
   const key = `user:${id}`;
 
   try {
-    if (req.headers["Cache-Control"] !== "no-cache") {
+    if (req.headers["cache-control"] !== "no-cache") {
       const cachedUser = await cache.get(key);
       if (cachedUser) {
         return res.status(200).json(JSON.parse(cachedUser));
@@ -53,7 +62,7 @@ const getById = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
+};
 
 const getProfile = async (req, res) => {
   const id = req.user.sub;
@@ -64,7 +73,7 @@ const getProfile = async (req, res) => {
   const key = `user:${id}`;
 
   try {
-    if (req.headers["Cache-Control"] !== "no-cache") {
+    if (req.headers["cache-control"] !== "no-cache") {
       const cachedUser = await cache.get(key);
       if (cachedUser) {
         return res.status(200).json(JSON.parse(cachedUser));
@@ -82,7 +91,7 @@ const getProfile = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
+};
 
 const update = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
@@ -111,7 +120,7 @@ const update = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
+};
 
 const getSubmissionHistory = async (req, res) => {
   const id = req.user.sub;
@@ -126,7 +135,7 @@ const getSubmissionHistory = async (req, res) => {
   const key = `user_submissions:${id}:${problem ? problem : "*"}:${limit}:${page}`;
 
   try {
-    if (req.headers["Cache-Control"] !== "no-cache") {
+    if (req.headers["cache-control"] !== "no-cache") {
       const cachedSubmissions = await cache.get(key);
       if (cachedSubmissions) {
         return res.status(200).json(JSON.parse(cachedSubmissions));
@@ -141,7 +150,7 @@ const getSubmissionHistory = async (req, res) => {
     const query = {
       user: id,
       ...(problem && { problem }),
-    }
+    };
 
     const submissions = await Submission.find(query).limit(limit).skip((page - 1) * limit);
     await cache.set(key, JSON.stringify(submissions), "EX", 600);
@@ -150,7 +159,7 @@ const getSubmissionHistory = async (req, res) => {
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
-}
+};
 
 const userController = {
   getAll,

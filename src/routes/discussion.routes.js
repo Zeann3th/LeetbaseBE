@@ -1,5 +1,6 @@
 import { Router } from "express";
 import discussionController from "../controllers/discussion.controller.js";
+import { verifyUser } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -9,12 +10,12 @@ router.get("/search", discussionController.search);
 
 router.get("/:id", discussionController.getById);
 
-router.post("/:id/vote", discussionController.vote);
+router.post("/:id/vote", verifyUser, discussionController.vote);
 
-router.post("/", discussionController.create);
+router.post("/", verifyUser, discussionController.create);
 
-router.patch("/:id", discussionController.update);
+router.patch("/:id", verifyUser, discussionController.update);
 
-router.delete("/:id", discussionController.remove);
+router.delete("/:id", verifyUser, discussionController.remove);
 
 export { router as discussionRouter };

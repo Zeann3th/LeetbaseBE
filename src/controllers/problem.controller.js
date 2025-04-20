@@ -13,17 +13,26 @@ const getAll = async (req, res) => {
   const key = `problems:${limit}:${page}`;
 
   try {
-    if (req.headers["Cache-Control"] !== "no-cache") {
+    if (req.headers["cache-control"] !== "no-cache") {
       const cachedProblems = await cache.get(key);
       if (cachedProblems) {
         return res.status(200).json(JSON.parse(cachedProblems));
       }
     }
 
-    const problems = await Problem.find({}, { description: 0 }).limit(limit).skip((page - 1) * limit);
-    await cache.set(key, JSON.stringify(problems), "EX", 600);
+    const [count, problems] = await Promise.all([
+      Problem.countDocuments(),
+      Problem.find({}, { description: 0 }).limit(limit).skip((page - 1) * limit)
+    ]);
 
-    return res.status(200).json(problems);
+    const response = {
+      maxPage: Math.ceil(count / limit),
+      data: problems,
+    };
+
+    await cache.set(key, JSON.stringify(response), "EX", 600);
+
+    return res.status(200).json(response);
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
@@ -38,7 +47,7 @@ const getById = async (req, res) => {
   const key = `problem:${id}`;
 
   try {
-    if (req.headers["Cache-Control"] !== "no-cache") {
+    if (req.headers["cache-control"] !== "no-cache") {
       const cachedProblem = await cache.get(key);
       if (cachedProblem) {
         return res.status(200).json(JSON.parse(cachedProblem));
@@ -83,6 +92,45 @@ const create = async (req, res) => {
   }
 };
 
+const getFunctionDeclaration = async (req, res) => {
+  const id = sanitize(req.params.id, "mongo");
+  const language = sanitize(req.query.language, "string");
+
+  if (!id) {
+    return res.status(400).json({ message: "Missing path id" });
+  }
+
+  if (!language) {
+    return res.status(400).json({ message: "Missing query language" });
+  }
+
+  const key = `problem:${id}:func:${language}`;
+
+  try {
+    if (req.headers["cache-control"] !== "no-cache") {
+      const cachedFunc = await cache.get(key);
+      if (cachedFunc) {
+        return res.status(200).json(JSON.parse(cachedFunc));
+      }
+    }
+
+    const problem = await Problem.findById(id);
+    if (!problem) {
+      return res.status(404).json({ message: "Problem not found" });
+    }
+
+    const func = await s3.getContent(`${id}/funcs/${language.toLowerCase()}`);
+    if (!func) {
+      return res.status(404).json({ message: "Function not found" });
+    }
+
+    await cache.set(key, JSON.stringify({ function: func }), "EX", 600);
+    res.status(200).json({ function: func });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+};
+
 const getUploadUrl = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
   const language = sanitize(req.body.language, "string");
@@ -112,6 +160,14 @@ const upload = async (req, res) => {
   }
   if (!language) {
     return res.status(400).json({ message: "Missing query language" });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ message: "No file uploaded" });
+  }
+
+  if (!commentMarkers[language]) {
+    return res.status(400).json({ message: `Unsupported language: ${language}` });
   }
 
   try {
@@ -206,7 +262,7 @@ const search = async (req, res) => {
 
   const key = `problems_search:${term}`;
 
-  if (req.headers["Cache-Control"] !== "no-cache") {
+  if (req.headers["cache-control"] !== "no-cache") {
     const cached = await cache.get(key);
     if (cached) {
       return res.status(200).json(JSON.parse(cached));
@@ -222,6 +278,11 @@ const search = async (req, res) => {
           "path": "title",
           "fuzzy": {}
         }
+      }
+    },
+    {
+      "$project": {
+        "description": 0,
       }
     }
   ]);
@@ -307,6 +368,7 @@ const problemController = {
   search,
   getLeaderboard,
   getDailies,
+  getFunctionDeclaration,
 };
 
 export default problemController;
