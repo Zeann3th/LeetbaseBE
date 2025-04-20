@@ -10,20 +10,29 @@ const getAll = async (req, res) => {
   const key = `discussions:${limit}:${page}`;
 
   try {
-    if (req.headers["Cache-Control"] === "no-cache") {
+    if (req.headers["cache-control"] === "no-cache") {
       const cachedDiscussions = await cache.get("discussions");
       if (cachedDiscussions) {
         return res.status(200).json(JSON.parse(cachedDiscussions));
       }
     }
 
-    const discussions = await Discussion.find().limit(limit).skip(limit * (page - 1));
-    await cache.set(key, JSON.stringify(discussions), "EX", 600);
-    res.status(200).json(discussions);
+    const [count, discussions] = await Promise.all([
+      Discussion.countDocuments(),
+      Discussion.find().limit(limit).skip(limit * (page - 1))
+    ]);
+
+    const response = {
+      maxPage: Math.ceil(count / limit),
+      data: discussions,
+    };
+
+    await cache.set(key, JSON.stringify(response), "EX", 600);
+    res.status(200).json(response);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 const getById = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
@@ -48,7 +57,7 @@ const getById = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 const create = async (req, res) => {
   const { title, content, tags } = req.body;
@@ -63,7 +72,7 @@ const create = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 const update = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
@@ -95,7 +104,7 @@ const update = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 const remove = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
@@ -119,7 +128,7 @@ const remove = async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
-}
+};
 
 const search = async (req, res) => {
   const term = sanitize(req.query.term, "string");
@@ -129,7 +138,7 @@ const search = async (req, res) => {
 
   const key = `discussions_search:${term}`;
 
-  if (req.headers["Cache-Control"] !== "no-cache") {
+  if (req.headers["cache-control"] !== "no-cache") {
     const cached = await cache.get(key);
     if (cached) {
       return res.status(200).json(JSON.parse(cached));
@@ -147,7 +156,7 @@ const search = async (req, res) => {
         }
       }
     }
-  ])
+  ]);
 
   if (!discussions) {
     return res.status(404).send({ message: "No discussions found" });
@@ -155,7 +164,7 @@ const search = async (req, res) => {
 
   await cache.set(key, JSON.stringify(discussions), "EX", 600);
   return res.status(200).send(discussions);
-}
+};
 
 const vote = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
@@ -206,7 +215,7 @@ const vote = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
-}
+};
 
 const discussionController = {
   getAll,
@@ -216,6 +225,6 @@ const discussionController = {
   remove,
   search,
   vote,
-}
+};
 
 export default discussionController;

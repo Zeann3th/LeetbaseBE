@@ -6,7 +6,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import { ipLimiter } from './middlewares/ratelimit.js';
-import router from './routes/index.js';
+import { v1Router, v2Router } from './routes/index.js';
 import mongoose from 'mongoose';
 import { isProduction } from './utils.js';
 
@@ -42,7 +42,8 @@ app.get("/csrf-token", (req, res) => {
   res.status(200).json({ csrfToken });
 });
 
-app.use("/v1", ipLimiter, router);
+app.use("/v1", ipLimiter, v1Router);
+app.use("/v2", ipLimiter, v2Router);
 
 mongoose.connect(process.env.MONGO_URI, {
   dbName: process.env.MONGO_DB_NAME

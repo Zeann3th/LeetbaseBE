@@ -6,8 +6,36 @@ const problemSchema = new mongoose.Schema({
     required: true,
   },
   description: {
-    type: String,
-    required: true,
+    text: {
+      type: String,
+      required: true,
+    },
+    examples: [
+      {
+        input: {
+          type: String,
+          required: true,
+        },
+        output: {
+          type: String,
+          required: true,
+        },
+        explanation: {
+          type: String,
+          required: false,
+        },
+      }
+    ],
+    constraints: [
+      {
+        type: String,
+        required: true,
+      }
+    ],
+    extra: {
+      type: String,
+      required: false,
+    },
   },
   difficulty: {
     type: String,
