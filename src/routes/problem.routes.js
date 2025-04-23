@@ -11,6 +11,8 @@ router.get("/search", problemController.search);
 
 router.get("/dailies", problemController.getDailies);
 
+router.get("/:id/solutions", verifyUser, problemController.getProblemSolutions);
+
 router.get("/:id", problemController.getById);
 
 router.get("/:id/functions", verifyUser, problemController.getFunctionDeclaration);

@@ -60,14 +60,24 @@ const getById = async (req, res) => {
 };
 
 const create = async (req, res) => {
-  const { title, content, tags } = req.body;
+  const { title, content, tags, solution } = req.body;
 
   if (!title || !content) {
     return res.status(400).json({ message: "Missing required fields in payload" });
   }
 
+  if (solution && (!solution.problem || !solution.language)) {
+    return res.status(400).json({ message: "Missing required fields in solution" });
+  }
+
   try {
-    const discussion = await Discussion.create({ title, content, tags, author: req.user.sub });
+    await Discussion.create({
+      title,
+      content,
+      tags,
+      author: req.user.sub,
+      ...(solution && { solution })
+    });
     res.status(201).json({ message: "Discussion created" });
   } catch (error) {
     res.status(500).json({ message: error.message });
