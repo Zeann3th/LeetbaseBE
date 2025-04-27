@@ -198,7 +198,13 @@ const getUploadUrl = async (req, res) => {
     return res.status(404).json({ message: "Problem not found" });
   }
 
-  const url = await s3.getSignedUploadURL(`${id}/templates/${language.toLowerCase()}`);
+  const normalizedLanguage = String(language).toLowerCase();
+  if (!problem.supports?.includes(normalizedLanguage)) {
+    problem.supports.push(normalizedLanguage);
+    await problem.save();
+  }
+
+  const url = await s3.getSignedUploadURL(`${id}/templates/${normalizedLanguage}`);
   return res.status(200).json({ url });
 };
 
@@ -212,13 +218,14 @@ const upload = async (req, res) => {
   if (!language) {
     return res.status(400).json({ message: "Missing query language" });
   }
+  const normalizedLanguage = String(language).toLowerCase();
 
   if (!req.file) {
     return res.status(400).json({ message: "No file uploaded" });
   }
 
-  if (!commentMarkers[language]) {
-    return res.status(400).json({ message: `Unsupported language: ${language}` });
+  if (!commentMarkers[normalizedLanguage]) {
+    return res.status(400).json({ message: `Unsupported language: ${normalizedLanguage}` });
   }
 
   try {
@@ -233,11 +240,12 @@ const upload = async (req, res) => {
     }
 
     const content = file.buffer.toString("utf-8");
-    const [func, rest] = extractCode(content, language);
+    const [func, rest] = extractCode(content, normalizedLanguage);
 
     await Promise.all([
-      s3.uploadContent(`${id}/templates/${language.toLowerCase()}`, rest),
-      s3.uploadContent(`${id}/funcs/${language.toLowerCase()}`, func),
+      s3.uploadContent(`${id}/templates/${normalizedLanguage}`, rest),
+      s3.uploadContent(`${id}/funcs/${normalizedLanguage}}`, func),
+      Problem.findByIdAndUpdate(id, { $addToSet: { supports: normalizedLanguage } }, { new: false })
     ]);
 
     res.status(200).json({ message: "File uploaded successfully" });
