@@ -244,7 +244,7 @@ const upload = async (req, res) => {
 
     await Promise.all([
       s3.uploadContent(`${id}/templates/${normalizedLanguage}`, rest),
-      s3.uploadContent(`${id}/funcs/${normalizedLanguage}}`, func),
+      s3.uploadContent(`${id}/funcs/${normalizedLanguage}`, func),
       Problem.findByIdAndUpdate(id, { $addToSet: { supports: normalizedLanguage } }, { new: false })
     ]);
 
