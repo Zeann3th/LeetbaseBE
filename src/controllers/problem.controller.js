@@ -199,12 +199,11 @@ const getUploadUrl = async (req, res) => {
   }
 
   const normalizedLanguage = String(language).toLowerCase();
-  if (!problem.supports?.includes(normalizedLanguage)) {
-    problem.supports.push(normalizedLanguage);
-    await problem.save();
-  }
 
-  const url = await s3.getSignedUploadURL(`${id}/templates/${normalizedLanguage}`);
+  const [url, _] = await Promise.all([
+    s3.getSignedUploadURL(`${id}/templates/${normalizedLanguage}`),
+    Problem.findByIdAndUpdate(id, { $addToSet: { supports: normalizedLanguage } }, { new: false })
+  ]);
   return res.status(200).json({ url });
 };
 
@@ -384,7 +383,7 @@ const getDailies = async (req, res) => {
   const end = new Date(year, month + 1, 0);
 
   try {
-    const problems = await DailyProblem.find({ date: { $gte: start, $lte: end } }).populate("problem");
+    const problems = await DailyProblem.find({ date: { $gte: start, $lte: end } }).populate("problem", "-description");
     res.status(200).json(problems);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -409,7 +408,7 @@ const getProblemSolutions = async (req, res) => {
   const query = {
     "solution.problem": id,
     ...(language && { "solution.language": language.toLowerCase() }),
-  }
+  };
 
   try {
     const [count, solutions] = await Promise.all([
