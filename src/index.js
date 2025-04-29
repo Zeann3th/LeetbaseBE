@@ -16,7 +16,7 @@ const port = process.env.PORT || 8000;
 // Security
 app.use(cors({
   origin: process.env.APP_URL || "*",
-  allowedHeaders: ["Content-Type", "Authorization", "Cache-Control"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "x-csrf-token"],
   credentials: true,
 }));
 app.use(helmet());
@@ -38,7 +38,7 @@ app.get("/healthz", (req, res) => {
 
 app.get("/csrf-token", (req, res) => {
   const csrfToken = crypto.randomUUID();
-  res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
+  res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, path: "/", partitioned: true, sameSite: isProduction ? "none" : "lax" });
   res.status(200).json({ csrfToken });
 });
 

@@ -67,8 +67,8 @@ const register = async (req, res) => {
 
       await auth.updateOne({ refreshToken, isAuthenticated: true });
 
-      res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true, maxAge: 24 * 60 * 60 * 1000 });
-      res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
+      res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, path: "/", partitioned: true, maxAge: 24 * 60 * 60 * 1000, sameSite: isProduction ? "none" : "lax" });
+      res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, path: "/", partitioned: true, sameSite: isProduction ? "none" : "lax" });
 
       mail.sendVerifyEmail(email);
       return res.status(201).json({ accessToken, csrfToken });
@@ -176,8 +176,8 @@ const login = async (req, res) => {
 
     await auth.updateOne({ refreshToken, isAuthenticated: true });
 
-    res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true, maxAge: 24 * 60 * 60 * 1000 });
-    res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
+    res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, path: "/", partitioned: true, maxAge: 24 * 60 * 60 * 1000, sameSite: isProduction ? "none" : "lax" });
+    res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, path: "/", partitioned: true, sameSite: isProduction ? "none" : "lax" });
 
     return res.status(200).json({ accessToken, csrfToken });
   } catch (err) {
@@ -232,8 +232,8 @@ const logout = async (req, res) => {
     await user.updateOne({ refreshToken: null, isAuthenticated: false });
   }
 
-  res.clearCookie("refresh_token", { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
-  res.clearCookie("_csrf", { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
+  res.clearCookie("refresh_token", { httpOnly: true, secure: isProduction, path: "/", partitioned: true, sameSite: isProduction ? "none" : "lax" });
+  res.clearCookie("_csrf", { httpOnly: true, secure: isProduction, path: "/", partitioned: true, sameSite: isProduction ? "none" : "lax" });
   return res.status(204).send();
 };
 
