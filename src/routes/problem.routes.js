@@ -15,7 +15,7 @@ router.get("/:id/solutions", verifyUser, problemController.getProblemSolutions);
 
 router.get("/:id", problemController.getById);
 
-router.get("/:id/functions", verifyUser, problemController.getFunctionDeclaration);
+router.get("/:id/functions", problemController.getFunctionDeclaration);
 
 router.get("/:id/leaderboards", verifyUser, problemController.getLeaderboard);
 
