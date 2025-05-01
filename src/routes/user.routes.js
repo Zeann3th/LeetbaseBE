@@ -9,6 +9,12 @@ router.get("/profile", userController.getProfile);
 
 router.get("/submissions", userController.getSubmissionHistory);
 
+router.get("/todos", userController.getTodoList);
+
+router.post("/todos", userController.addProblemsToTodo);
+
+router.delete("/todos/:problem", userController.removeProblemFromTodo);
+
 router.get("/:id", userController.getById);
 
 router.patch("/:id", userController.update);
