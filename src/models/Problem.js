@@ -46,6 +46,12 @@ const problemSchema = new mongoose.Schema({
     type: [String],
     required: false,
   },
+  supports: [
+    {
+      type: String,
+      required: false,
+    }
+  ]
 });
 
 const Problem = mongoose.model("Problem", problemSchema);

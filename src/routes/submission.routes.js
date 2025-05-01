@@ -3,6 +3,8 @@ import submissionController from "../controllers/submission.controller.js";
 
 const router = Router();
 
+router.get("/", submissionController.getAll);
+
 router.get("/:id", submissionController.getById);
 
 router.post("/", submissionController.create);

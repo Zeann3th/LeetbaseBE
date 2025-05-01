@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import { ipLimiter } from './middlewares/ratelimit.js';
 import { v1Router, v2Router } from './routes/index.js';
@@ -16,7 +17,7 @@ const port = process.env.PORT || 8000;
 // Security
 app.use(cors({
   origin: process.env.APP_URL || "*",
-  allowedHeaders: ["Content-Type", "Authorization", "Cache-Control"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "x-csrf-token"],
   credentials: true,
 }));
 app.use(helmet());
@@ -38,7 +39,7 @@ app.get("/healthz", (req, res) => {
 
 app.get("/csrf-token", (req, res) => {
   const csrfToken = crypto.randomUUID();
-  res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, sameSite: "none", path: "/", partitioned: true });
+  res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, path: "/", sameSite: isProduction ? "none" : "lax", partitioned: isProduction });
   res.status(200).json({ csrfToken });
 });
 

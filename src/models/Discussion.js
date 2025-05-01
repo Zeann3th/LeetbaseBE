@@ -13,6 +13,17 @@ const discussionSchema = new mongoose.Schema({
   comments: {
     type: [{ type: mongoose.Schema.Types.ObjectId, ref: "Comment" }]
   },
+  solution: {
+    problem: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Problem",
+      required: false,
+    },
+    language: {
+      type: String,
+      required: false,
+    }
+  },
   author: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",

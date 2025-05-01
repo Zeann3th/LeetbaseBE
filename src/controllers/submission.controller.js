@@ -5,6 +5,32 @@ import s3 from "../services/storage.js";
 import Submission from "../models/Submission.js";
 import { commentMarkers } from "../config/markers.js";
 
+const getAll = async (req, res) => {
+  const problemId = sanitize(req.query.problemId, "mongo");
+  const language = sanitize(req.query.language, "string");
+  const page = sanitize(req.query.page, "number") || 1;
+  const limit = sanitize(req.query.limit, "number") || 10;
+
+  try {
+    const query = {
+      user: req.user.sub,
+      ...(problemId && { problem: problemId }),
+      ...(language && { language }),
+    }
+    const [count, submissions] = await Promise.all([
+      Submission.countDocuments(query),
+      Submission.find(query).sort({ createdAt: -1 }).limit(limit).skip((page - 1) * limit)
+    ]);
+
+    res.status(200).json({
+      maxPage: Math.ceil(count / limit),
+      data: submissions,
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+}
+
 const getById = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
   if (!id) {
@@ -85,11 +111,7 @@ const create = async (req, res) => {
       user: req.user.sub,
       problem: problemId,
       language,
-      status: compile?.stderr
-        ? "COMPILE_ERROR"
-        : run?.stderr
-          ? "WRONG_ANSWER"
-          : "ACCEPTED",
+      status: compile?.stderr ? "COMPILE_ERROR" : run?.stderr ? "WRONG_ANSWER" : "ACCEPTED",
       code,
       error: compile?.stderr || run?.stderr || null,
       runtime: end - start,
@@ -120,6 +142,7 @@ const getLanguageVersion = async (language) => {
 };
 
 const submissionController = {
+  getAll,
   getById,
   create,
 };
