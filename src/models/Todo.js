@@ -11,7 +11,7 @@ const todoSchema = new mongoose.Schema({
     ref: "Problem",
     required: true,
   }
-});
+}, { timestamps: true });
 
 const Todo = mongoose.model("Todo", todoSchema);
 

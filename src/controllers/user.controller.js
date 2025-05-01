@@ -172,7 +172,7 @@ const getTodoList = async (req, res) => {
   try {
     const [count, todos] = await Promise.all([
       Todo.countDocuments({ user: id }),
-      Todo.find({ user: id }).populate("problem", "-description").limit(limit).skip(limit * (page - 1))
+      Todo.find({ user: id }).sort({ createdAt: -1 }).limit(limit).skip(limit * (page - 1)).populate("problem", "-description")
     ]);
 
     return res.status(200).json({
