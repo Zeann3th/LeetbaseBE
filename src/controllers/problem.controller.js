@@ -413,7 +413,7 @@ const getProblemSolutions = async (req, res) => {
   try {
     const [count, solutions] = await Promise.all([
       Discussion.countDocuments(query),
-      Discussion.find(query).sort({ createdAt: -1 }).limit(limit).skip((page - 1) * limit)
+      Discussion.find(query).sort({ createdAt: -1 }).limit(limit).skip((page - 1) * limit).populate("author")
     ]);
     if (!solutions) {
       return res.status(404).json({ message: "Solutions not found" });

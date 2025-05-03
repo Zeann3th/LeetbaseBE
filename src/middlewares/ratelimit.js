@@ -2,7 +2,7 @@ import rateLimit from "express-rate-limit";
 
 const ipLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 100,
+  limit: 200,
   legacyHeaders: false,
   keyGenerator: function(req) {
     return req.headers["cf-connecting-ip"] ||
@@ -11,11 +11,11 @@ const ipLimiter = rateLimit({
       req.connection.remoteAddress ||
       "";
   }
-})
+});
 
 const emailLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
-  max: 3,
+  max: 6,
   message: "Too many requests to this email, please try again after 1 hour",
   keyGenerator: function(req) {
     return req.body.email;

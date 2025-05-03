@@ -19,7 +19,7 @@ const getAll = async (req, res) => {
 
     const [count, discussions] = await Promise.all([
       Discussion.countDocuments(),
-      Discussion.find().limit(limit).skip(limit * (page - 1))
+      Discussion.find().sort({ createdAt: -1 }).limit(limit).skip(limit * (page - 1)).populate("author")
     ]);
 
     const response = {
@@ -141,6 +141,8 @@ const remove = async (req, res) => {
 };
 
 const search = async (req, res) => {
+  const limit = sanitize(req.query.limit, "number") || 10;
+  const page = sanitize(req.query.page, "number") || 1;
   const term = sanitize(req.query.term, "string");
   if (!term) {
     return res.status(400).send({ message: "Invalid search term" });
@@ -155,25 +157,50 @@ const search = async (req, res) => {
     }
   }
 
-  const discussions = await Discussion.aggregate([
-    {
-      "$search": {
-        "index": "discussionsIdx",
-        "text": {
-          "query": term,
-          "path": ["title", "content"],
-          "fuzzy": {}
+  const [[{ count }], discussions] = await Promise.all([
+    Discussion.aggregate([
+      {
+        $search: {
+          index: "discussionsIdx",
+          text: { query: term, path: ["title", "content"], fuzzy: {} }
         }
+      },
+      {
+        $count: "count"
       }
-    }
+    ]),
+    Discussion.aggregate([
+      {
+        "$search": {
+          "index": "discussionsIdx",
+          "text": {
+            "query": term,
+            "path": ["title", "content"],
+            "fuzzy": {}
+          }
+        }
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "author",
+          foreignField: "_id",
+          as: "author"
+        }
+      }, { $unwind: "$author" }, { $skip: (page - 1) * limit }, { $limit: limit }])
   ]);
 
   if (!discussions) {
     return res.status(404).send({ message: "No discussions found" });
   }
 
-  await cache.set(key, JSON.stringify(discussions), "EX", 600);
-  return res.status(200).send(discussions);
+  const response = {
+    maxPage: Math.ceil(count / limit),
+    data: discussions
+  };
+
+  await cache.set(key, JSON.stringify(response), "EX", 600);
+  return res.status(200).send(response);
 };
 
 const vote = async (req, res) => {
