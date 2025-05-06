@@ -324,7 +324,7 @@ const handleOAuthCallback = async (req, res) => {
 
     let user = await Auth.findOne({ email: { $eq: email } });
     if (!user) {
-      const user = await Auth.create({
+      user = await Auth.create({
         username: githubUser.login,
         email,
         isEmailVerified: true,

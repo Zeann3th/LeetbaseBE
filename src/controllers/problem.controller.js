@@ -63,7 +63,7 @@ const getAll = async (req, res) => {
     }
 
     const interacted = await Submission.find(
-      { user: userId },
+      { user: userId, problem: { $in: problems.map((p) => p._id) } },
       { problem: 1, status: 1 }
     );
 
@@ -313,44 +313,132 @@ const remove = async (req, res) => {
 };
 
 const search = async (req, res) => {
-  const term = sanitize(req.query.term, "string");
-  if (!term) {
-    return res.status(400).send({ message: "Invalid search term" });
-  }
+  try {
+    const limit = sanitize(req.query.limit, "number") || 10;
+    const page = sanitize(req.query.page, "number") || 1;
+    const term = sanitize(req.query.term, "string");
+    const auth = req.headers["authorization"] || null;
+    let key = `problems_search:${term}:${limit}:${page}`;
+    let userId = null;
 
-  const key = `problems_search:${term}`;
-
-  if (req.headers["cache-control"] !== "no-cache") {
-    const cached = await cache.get(key);
-    if (cached) {
-      return res.status(200).json(JSON.parse(cached));
+    if (!term) {
+      return res.status(400).send({ message: "Invalid search term" });
     }
-  }
 
-  const problems = await Problem.aggregate([
-    {
-      "$search": {
-        "index": "problemsIdx",
-        "text": {
-          "query": term,
-          "path": "title",
-          "fuzzy": {}
+    if (term.length < 2) {
+      return res.status(400).send({ message: "Search term must be at least 2 characters long" });
+    }
+
+    if (auth) {
+      const token = auth.split(" ")[1];
+      try {
+        const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+        if (decoded?.sub) {
+          userId = decoded.sub;
+          key = `problems_search:${term}:${limit}:${page}:user:${userId}`;
+        }
+      } catch (tokenErr) {
+      }
+    }
+
+    if (req.headers["cache-control"] !== "no-cache") {
+      const cached = await cache.get(key);
+      if (cached) {
+        return res.status(200).json(JSON.parse(cached));
+      }
+    }
+
+    const skip = (page - 1) * limit;
+
+    const [result] = await Problem.aggregate([
+      {
+        "$search": {
+          "index": "problemsIdx",
+          "text": {
+            "query": term,
+            "path": "title",
+            "fuzzy": {},
+          }
+        }
+      },
+      {
+        "$facet": {
+          "count": [{ "$count": "count" }],
+          "problems": [
+            { "$project": { "description": 0 } },
+            { "$skip": skip },
+            { "$limit": limit }
+          ]
         }
       }
-    },
-    {
-      "$project": {
-        "description": 0,
-      }
+    ])
+
+    const count = result.count[0]?.count || 0;
+    const problems = result.problems || [];
+
+    if (!problems || problems.length === 0) {
+      return res.status(200).json({
+        maxPage: 0,
+        data: [],
+      })
     }
-  ]);
 
-  if (!problems) {
-    return res.status(404).send({ message: "No problems found" });
+    if (!userId) {
+      const response = {
+        maxPage: Math.ceil(count / limit),
+        data: problems,
+      };
+      await cache.set(key, JSON.stringify(response), "EX", 600);
+      return res.status(200).json(response);
+    }
+
+    const user = await Auth.findById(userId);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+    if (!user.isAuthenticated) {
+      return res.status(401).json({ message: "User is not authenticated" });
+    }
+    if (!user.isEmailVerified) {
+      return res.status(403).json({ message: "Email is not verified" });
+    }
+
+    const interacted = await Submission.find(
+      { user: userId, problem: { $in: problems.map((p) => p._id) } },
+      { problem: 1, status: 1 }
+    );
+
+    const solvedIds = new Set(
+      interacted
+        .filter((s) => s.status === "ACCEPTED")
+        .map((s) => s.problem.toString())
+    );
+
+    const interactedIds = new Set(
+      interacted.map((s) => s.problem.toString())
+    );
+
+    const problemsWithStatus = problems.map((problem) => {
+      return {
+        ...problem,
+        status: solvedIds.has(problem._id.toString())
+          ? "SOLVED"
+          : interactedIds.has(problem._id.toString())
+            ? "ATTEMPTED"
+            : "UNSOLVED",
+      };
+    });
+
+    const response = {
+      maxPage: Math.ceil(count / limit),
+      data: problemsWithStatus,
+    };
+
+    await cache.set(key, JSON.stringify(response), "EX", 600);
+    return res.status(200).json(response);
+  } catch (err) {
+    return res.status(500).json({ message: "An error occurred during search" });
   }
-
-  await cache.set(key, JSON.stringify(problems), "EX", 600);
-  return res.status(200).send(problems);
 };
 
 const getLeaderboard = async (req, res) => {
@@ -376,8 +464,13 @@ const getLeaderboard = async (req, res) => {
 };
 
 const getDailies = async (req, res) => {
-  const month = sanitize(req.query.month, "number") || new Date().getMonth();
+  let month = sanitize(req.query.month, "number") || new Date().getMonth() + 1;
   const year = sanitize(req.query.year, "number") || new Date().getFullYear();
+
+  month = month - 1;
+  if (month < 0 || month > 11) {
+    return res.status(400).json({ message: "Invalid month" });
+  }
 
   const start = new Date(year, month, 1);
   const end = new Date(year, month + 1, 0);
