@@ -58,9 +58,6 @@ const getAll = async (req, res) => {
     if (!user.isAuthenticated) {
       return res.status(401).json({ message: "User is not authenticated" });
     }
-    if (!user.isEmailVerified) {
-      return res.status(403).json({ message: "Email is not verified" });
-    }
 
     const interacted = await Submission.find(
       { user: userId, problem: { $in: problems.map((p) => p._id) } },
@@ -91,13 +88,28 @@ const getAll = async (req, res) => {
 
 const getById = async (req, res) => {
   const id = sanitize(req.params.id, "mongo");
+  const auth = req.headers["authorization"] || null;
+  let userId = null;
+
   if (!id) {
     return res.status(400).json({ message: "Missing path id" });
   }
 
-  const key = `problem:${id}`;
+  let key = `problem:${id}`;
 
   try {
+    if (auth) {
+      const token = auth.split(" ")[1];
+      try {
+        const decoded = jwt.verify(token, process.env.TOKEN_SECRET);
+        if (decoded?.sub) {
+          userId = decoded.sub;
+          key = `problems:${id}:user:${userId}`;
+        }
+      } catch (tokenErr) {
+      }
+    }
+
     if (req.headers["cache-control"] !== "no-cache") {
       const cachedProblem = await cache.get(key);
       if (cachedProblem) {
@@ -110,9 +122,30 @@ const getById = async (req, res) => {
       return res.status(404).json({ message: "Problem not found" });
     }
 
-    await cache.set(key, JSON.stringify(problem), "EX", 600);
+    if (!userId) {
+      await cache.set(key, JSON.stringify(problem), "EX", 600);
+      return res.status(200).json(problem);
+    }
 
-    return res.status(200).json(problem);
+    const user = await Auth.findById(userId);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+    if (!user.isAuthenticated) {
+      return res.status(401).json({ message: "User is not authenticated" });
+    }
+
+    const interacted = await Submission.find({ user: userId, problem: id }, { status: 1 });
+    const solved = interacted.some((s) => s.status === "ACCEPTED");
+
+    const response = {
+      ...problem.toObject(),
+      status: interacted.length > 0 ? (solved ? "SOLVED" : "ATTEMPTED") : "UNSOLVED",
+    };
+
+    await cache.set(key, JSON.stringify(response), "EX", 600);
+
+    return res.status(200).json(response);
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
@@ -325,10 +358,6 @@ const search = async (req, res) => {
       return res.status(400).send({ message: "Invalid search term" });
     }
 
-    if (term.length < 2) {
-      return res.status(400).send({ message: "Search term must be at least 2 characters long" });
-    }
-
     if (auth) {
       const token = auth.split(" ")[1];
       try {
@@ -371,7 +400,7 @@ const search = async (req, res) => {
           ]
         }
       }
-    ])
+    ], { collation: { locale: "en", strength: 2 } });
 
     const count = result.count[0]?.count || 0;
     const problems = result.problems || [];
@@ -398,9 +427,6 @@ const search = async (req, res) => {
     }
     if (!user.isAuthenticated) {
       return res.status(401).json({ message: "User is not authenticated" });
-    }
-    if (!user.isEmailVerified) {
-      return res.status(403).json({ message: "Email is not verified" });
     }
 
     const interacted = await Submission.find(

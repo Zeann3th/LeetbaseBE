@@ -49,7 +49,7 @@ const register = async (req, res) => {
         avatar: sanitize(avatar, "url") || null
       });
 
-      const payload = { sub: auth._id, username: auth.username, role: auth.role, email: auth.email };
+      const payload = { sub: auth._id, username: auth.username, role: auth.role, email: auth.email, isVerified: auth.isEmailVerified };
 
       const accessToken = jwt.sign(
         payload,
@@ -158,7 +158,7 @@ const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid password" });
     }
 
-    const payload = { sub: auth._id, username: auth.username, role: auth.role, email: auth.email };
+    const payload = { sub: auth._id, username: auth.username, role: auth.role, email: auth.email, isVerified: auth.isEmailVerified };
 
     const accessToken = jwt.sign(
       payload,
@@ -201,7 +201,7 @@ const refresh = async (req, res) => {
     }
 
     const accessToken = jwt.sign(
-      { sub: decoded.sub, username: decoded.username, role: decoded.role, email: decoded.email },
+      { sub: decoded.sub, username: decoded.username, role: decoded.role, email: decoded.email, isVerified: decoded.isVerified },
       process.env.TOKEN_SECRET,
       { expiresIn: "15m" }
     );
@@ -337,7 +337,7 @@ const handleOAuthCallback = async (req, res) => {
       });
     }
 
-    const payload = { sub: user._id, username: user.username, role: user.role, email: user.email };
+    const payload = { sub: user._id, username: user.username, role: user.role, email: user.email, isVerified: user.isEmailVerified };
     const accessToken = jwt.sign(payload, process.env.TOKEN_SECRET, { expiresIn: "15m" });
     const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: "1d" });
     const csrfToken = crypto.randomUUID();

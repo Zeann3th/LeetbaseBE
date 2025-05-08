@@ -17,7 +17,7 @@ const port = process.env.PORT || 8000;
 // Security
 app.use(cors({
   origin: process.env.APP_URL || "http://localhost:5173",
-  allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "x-csrf-token"],
+  allowedHeaders: ["Content-Type", "Authorization", "Cache-Control", "x-csrf-token", "x-service-token"],
   credentials: true,
 }));
 app.use(helmet());

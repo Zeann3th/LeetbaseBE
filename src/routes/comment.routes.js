@@ -1,17 +1,17 @@
 import { Router } from "express";
 import commentController from "../controllers/comment.controller.js";
-import { verifyUser } from "../middlewares/auth.js";
+import { createAuthMiddleware } from "../middlewares/auth.js";
 
 const router = Router();
 
 router.get("/:id", commentController.getById);
 
-router.post("/:id/vote", verifyUser, commentController.vote);
+router.post("/:id/vote", createAuthMiddleware(), commentController.vote);
 
-router.post("/", verifyUser, commentController.create);
+router.post("/", createAuthMiddleware(), commentController.create);
 
-router.patch("/:id", verifyUser, commentController.update);
+router.patch("/:id", createAuthMiddleware(), commentController.update);
 
-router.delete("/:id", verifyUser, commentController.remove);
+router.delete("/:id", createAuthMiddleware(), commentController.remove);
 
 export { router as commentRouter };

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { verifyAdmin, verifyUser } from "../middlewares/auth.js";
+import { createAuthMiddleware } from "../middlewares/auth.js";
 import problemController from "../controllers/problem.controller.js";
 import { upload } from "../middlewares/multer.js";
 
@@ -17,14 +17,14 @@ router.get("/:id", problemController.getById);
 
 router.get("/:id/functions", problemController.getFunctionDeclaration);
 
-router.get("/:id/leaderboards", verifyUser, problemController.getLeaderboard);
+router.get("/:id/leaderboards", createAuthMiddleware(), problemController.getLeaderboard);
 
-router.post("/", verifyUser, verifyAdmin, problemController.create);
+router.post("/", createAuthMiddleware({ roles: ["ADMIN"] }), problemController.create);
 
-router.post("/:id/upload", verifyUser, verifyAdmin, upload.single("file"), problemController.upload);
+router.post("/:id/upload", createAuthMiddleware({ roles: ["ADMIN"] }), upload.single("file"), problemController.upload);
 
-router.patch("/:id", verifyUser, verifyAdmin, problemController.update);
+router.patch("/:id", createAuthMiddleware({ roles: ["ADMIN"] }), problemController.update);
 
-router.delete("/:id", verifyUser, verifyAdmin, problemController.remove);
+router.delete("/:id", createAuthMiddleware({ roles: ["ADMIN"] }), problemController.remove);
 
 export { router as problemRouter };

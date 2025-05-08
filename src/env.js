@@ -24,6 +24,7 @@ class Env {
 new Env({
   PORT: true,
   APP_URL: true,
+  SERVICE_TOKEN: true,
   // MONGODB
   MONGO_URI: true,
   MONGO_DB_NAME: true,
