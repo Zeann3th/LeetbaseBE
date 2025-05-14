@@ -100,11 +100,31 @@ const verifyEmail = async (req, res) => {
       return res.status(400).json({ message: "Invalid or expired pin" });
     }
 
-    await Promise.all([
+    const [user, _] = await Promise.all([
       Auth.findOneAndUpdate({ email: { $eq: email } }, { isEmailVerified: true }),
       cache.del(`verify:${email}`)
     ]);
-    return res.status(200).json({ message: "Email verified successfully" });
+
+    const payload = { sub: user._id, username: user.username, role: user.role, email: user.email, isVerified: true };
+
+    const accessToken = jwt.sign(
+      payload,
+      process.env.TOKEN_SECRET,
+      { expiresIn: "15m" }
+    );
+
+    const refreshToken = jwt.sign(
+      payload,
+      process.env.REFRESH_TOKEN_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    const csrfToken = crypto.randomUUID();
+
+    res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, path: "/", maxAge: 24 * 60 * 60 * 1000, sameSite: isProduction ? "none" : "lax", partitioned: isProduction });
+    res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, path: "/", sameSite: isProduction ? "none" : "lax", partitioned: isProduction });
+
+    return res.status(200).json({ accessToken, csrfToken });
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
@@ -342,7 +362,7 @@ const handleOAuthCallback = async (req, res) => {
     const refreshToken = jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, { expiresIn: "1d" });
     const csrfToken = crypto.randomUUID();
 
-    await user.updateOne({ refreshToken });
+    await user.updateOne({ refreshToken, isAuthenticated: true });
 
     res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, maxAge: 24 * 60 * 60 * 1000, path: "/", sameSite: isProduction ? "none" : "lax", partitioned: isProduction });
     res.cookie("_csrf", csrfToken, { httpOnly: true, secure: isProduction, path: "/", sameSite: isProduction ? "none" : "lax", partitioned: isProduction });
