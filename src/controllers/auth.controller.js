@@ -119,6 +119,8 @@ const verifyEmail = async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    await user.updateOne({ refreshToken, isAuthenticated: true });
+
     const csrfToken = crypto.randomUUID();
 
     res.cookie("refresh_token", refreshToken, { httpOnly: true, secure: isProduction, path: "/", maxAge: 24 * 60 * 60 * 1000, sameSite: isProduction ? "none" : "lax", partitioned: isProduction });
@@ -217,7 +219,7 @@ const refresh = async (req, res) => {
 
     const user = await Auth.findOne({ refreshToken: { $eq: refreshToken } });
     if (!user) {
-      return res.status(403).json({ message: "Invalid refresh tokend" });
+      return res.status(403).json({ message: "Invalid refresh token" });
     }
 
     const accessToken = jwt.sign(

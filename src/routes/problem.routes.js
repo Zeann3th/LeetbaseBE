@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { createAuthMiddleware } from "../middlewares/auth.js";
 import problemController from "../controllers/problem.controller.js";
-import { upload } from "../middlewares/multer.js";
+import { codeUploader } from "../middlewares/multer.js";
 
 const router = Router();
 
@@ -21,7 +21,7 @@ router.get("/:id/leaderboards", createAuthMiddleware(), problemController.getLea
 
 router.post("/", createAuthMiddleware({ roles: ["ADMIN"] }), problemController.create);
 
-router.post("/:id/upload", createAuthMiddleware({ roles: ["ADMIN"] }), upload.single("file"), problemController.upload);
+router.post("/:id/upload", codeUploader.single("file"), createAuthMiddleware({ roles: ["ADMIN"] }), problemController.upload);
 
 router.patch("/:id", createAuthMiddleware({ roles: ["ADMIN"] }), problemController.update);
 

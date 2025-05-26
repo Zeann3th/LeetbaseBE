@@ -9,6 +9,7 @@ import cookieParser from 'cookie-parser';
 import { ipLimiter } from './middlewares/ratelimit.js';
 import { v1Router, v2Router } from './routes/index.js';
 import mongoose from 'mongoose';
+import multer from 'multer';
 import { isProduction } from './utils.js';
 
 const app = express();
@@ -45,6 +46,18 @@ app.get("/csrf-token", (req, res) => {
 
 app.use("/v1", ipLimiter, v1Router);
 app.use("/v2", ipLimiter, v2Router);
+
+app.use((err, req, res, next) => {
+  if (err.name === "INVALID_FILE_TYPE") {
+    return res.status(400).json({ error: err.message });
+  }
+  if (err instanceof multer.MulterError) {
+    return res.status(400).json({ error: err.message });
+  }
+  console.error(err);
+  res.status(500).json({ error: "Something went wrong." });
+});
+
 
 mongoose.connect(process.env.MONGO_URI, {
   dbName: process.env.MONGO_DB_NAME

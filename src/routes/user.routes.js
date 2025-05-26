@@ -1,6 +1,7 @@
 import { Router } from "express";
 import userController from "../controllers/user.controller.js";
 import { createAuthMiddleware } from "../middlewares/auth.js";
+import { imageUploader } from "../middlewares/multer.js";
 
 const router = Router();
 
@@ -18,6 +19,6 @@ router.delete("/todos/:problem", createAuthMiddleware({ allowService: true }), u
 
 router.get("/:id", createAuthMiddleware({ requireEmailVerified: false }), userController.getById);
 
-router.patch("/:id", createAuthMiddleware({ requireEmailVerified: false }), userController.update);
+router.patch("/:id", imageUploader.single("file"), createAuthMiddleware({ requireEmailVerified: false }), userController.update);
 
 export { router as userRouter };

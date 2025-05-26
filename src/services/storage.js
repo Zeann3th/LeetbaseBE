@@ -12,7 +12,7 @@ class S3StorageService {
       },
     });
   }
-  async getSignedUploadURL(key, expiresIn = 300) {
+  async getSignedUploadURL(key, expiresIn = 3600) {
     const url = await getSignedUrl(this.client, new PutObjectCommand({
       Bucket: process.env.CF_BUCKET,
       Key: key,

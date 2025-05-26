@@ -3,6 +3,7 @@ import User from "../models/User.js";
 import Todo from "../models/Todo.js";
 import cache from "../services/cache.js";
 import { sanitize } from "../utils.js";
+import cloudinary from "../services/image.js";
 
 const getAll = async (req, res) => {
   const limit = sanitize(req.query.limit, "number") || 10;
@@ -105,6 +106,7 @@ const update = async (req, res) => {
   }
 
   const { name, avatar } = req.body;
+  const file = req.file;
 
   try {
     const user = await User.findById(id);
@@ -113,7 +115,26 @@ const update = async (req, res) => {
     }
 
     if (name) user.name = sanitize(name, "string");
+
+    if (avatar && file) {
+      return res.status(400).json({ message: "Invalid payload" });
+    }
+
     if (avatar) user.avatar = sanitize(avatar, "url");
+
+    if (file) {
+      const base64 = file.buffer.toString('base64');
+      const dataUri = `data:${file.mimetype};base64,${base64}`;
+
+      cloudinary.uploader.upload(dataUri, {
+        folder: 'avatars',
+        public_id: `lbuser_${req.user.sub}`,
+        overwrite: true,
+        invalidate: true,
+      });
+
+      user.avatar = `https://res.cloudinary.com/${process.env.CLOUDINARY_NAME}/image/upload/avatars/lbuser_${req.user.sub}.jpg`;
+    }
 
     await user.save();
 

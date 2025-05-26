@@ -27,6 +27,7 @@ const getAll = async (req, res) => {
           key = `problems:${limit}:${page}:user:${userId}`;
         }
       } catch (tokenErr) {
+        return res.status(401).json({ message: "Invalid token" });
       }
     }
 
@@ -107,6 +108,7 @@ const getById = async (req, res) => {
           key = `problems:${id}:user:${userId}`;
         }
       } catch (tokenErr) {
+        return res.status(401).json({ message: "Invalid token" });
       }
     }
 

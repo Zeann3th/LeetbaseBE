@@ -45,4 +45,9 @@ new Env({
   // Github OAuth
   GH_CLIENT_ID: true,
   GH_CLIENT_SECRET: true,
+
+  // Cloudinary
+  CLOUDINARY_NAME: true,
+  CLOUDINARY_API_KEY: true,
+  CLOUDINARY_API_SECRET: true,
 })
