@@ -13,6 +13,8 @@ router.get("/submissions", createAuthMiddleware(), userController.getSubmissionH
 
 router.get("/todos", createAuthMiddleware({ allowService: true }), userController.getTodoList);
 
+router.get("/discussions", createAuthMiddleware({ requireEmailVerified: false }), userController.getDiscussions);
+
 router.post("/todos", createAuthMiddleware({ allowService: true }), userController.addProblemsToTodo);
 
 router.delete("/todos/:problem", createAuthMiddleware({ allowService: true }), userController.removeProblemFromTodo);

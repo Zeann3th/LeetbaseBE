@@ -4,6 +4,7 @@ import Todo from "../models/Todo.js";
 import cache from "../services/cache.js";
 import { sanitize } from "../utils.js";
 import cloudinary from "../services/image.js";
+import Discussion from "../models/Discussion.js";
 
 const getAll = async (req, res) => {
   const limit = sanitize(req.query.limit, "number") || 10;
@@ -262,6 +263,40 @@ const removeProblemFromTodo = async (req, res) => {
   }
 };
 
+const getDiscussions = async (req, res) => {
+  const id = req.user.sub;
+  const problemId = sanitize(req.query.problemId, "mongo");
+  const limit = sanitize(req.query.limit, "number") || 10;
+  const page = sanitize(req.query.page, "number") || 1;
+  if (!id) {
+    return res.status(401).json({ message: "Missing user credentials" });
+  }
+  try {
+    const [count, discussions] = await Promise.all([
+      Discussion.countDocuments({
+        author: id,
+        ...(problemId ? { "solution.problem": problemId } : {})
+      }),
+      Discussion.find({
+        author: id,
+        ...(problemId ? { "solution.problem": problemId } : {})
+      })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(limit * (page - 1))
+        .populate("author")
+        .populate("solution.problem", "-description")
+    ]);
+
+    return res.status(200).json({
+      maxPage: Math.ceil(count / limit),
+      data: discussions,
+    });
+  } catch (err) {
+    return res.status(500).json({ message: err.message });
+  }
+}
+
 const userController = {
   getAll,
   getById,
@@ -271,6 +306,7 @@ const userController = {
   getTodoList,
   addProblemsToTodo,
   removeProblemFromTodo,
+  getDiscussions
 };
 
 export default userController;
