@@ -50,17 +50,23 @@ const getById = async (req, res) => {
 const create = async (req, res) => {
   const problemId = sanitize(req.body.problemId, "mongo");
   const language = sanitize(req.body.language, "string");
+  let pistonLang = language;
   const code = req.body.code;
 
   if (!problemId || !language || !code) {
     return res.status(400).json({ message: "Missing required fields in payload" });
   }
 
+  // Exclusion list
+  if (language === "cpp") {
+    pistonLang = "c++";
+  }
+
   try {
     const [problem, template, languageVersion] = await Promise.all([
       Problem.findById(problemId),
       s3.getContent(`${problemId}/templates/${language.toLowerCase()}`),
-      getLanguageVersion(language),
+      getLanguageVersion(pistonLang),
     ]);
 
     if (!problem) {
@@ -95,7 +101,7 @@ const create = async (req, res) => {
         "Content-Type": "application/json"
       },
       data: {
-        language: language,
+        language: pistonLang,
         version: languageVersion,
         files: [
           { content: submit }
