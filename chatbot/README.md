@@ -31,7 +31,7 @@ uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
 ## API Endpoints
 
-### Chat Endpoints
+### Chatbot Endpoints
 
 - `POST /chat/ask`
   - Send messages to the chatbot
