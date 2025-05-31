@@ -348,7 +348,7 @@ const handleOAuthCallback = async (req, res) => {
     if (!user) {
       const hashedPassword = await bcrypt.hash(crypto.randomBytes(64).toString("hex"), saltRounds);
       user = await Auth.create({
-        username: githubUser.login,
+        username: githubUser.login + "_" + crypto.randomUUID().slice(0, 5),
         email,
         isEmailVerified: true,
         password: hashedPassword,
