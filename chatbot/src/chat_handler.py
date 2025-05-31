@@ -38,7 +38,7 @@ add_problems_to_todo = FunctionDeclaration(
             "problems": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Danh sách problem ID cần thêm vào todo"
+                "description": "Danh sách problem ID cần thêm vào todo (bắt buộc phải là ID của bài tập)"
             }
         },
         "required": ["problems"],
