@@ -5,6 +5,7 @@ import cache from "../services/cache.js";
 import { sanitize } from "../utils.js";
 import cloudinary from "../services/image.js";
 import Discussion from "../models/Discussion.js";
+import Problem from "../models/Problem.js";
 
 const getAll = async (req, res) => {
   const limit = sanitize(req.query.limit, "number") || 10;
@@ -188,19 +189,47 @@ const getTodoList = async (req, res) => {
   const id = req.user.sub;
   const limit = sanitize(req.query.limit, "number") || 10;
   const page = sanitize(req.query.page, "number") || 1;
+
   if (!id) {
     return res.status(401).json({ message: "Missing user credentials" });
   }
+
   try {
     const [count, todos] = await Promise.all([
       Todo.countDocuments({ user: id }),
-      Todo.find({ user: id }).sort({ createdAt: -1 }).limit(limit).skip(limit * (page - 1)).populate("problem", "-description")
+      Todo.find({ user: id })
+        .sort({ createdAt: -1 })
+        .limit(limit)
+        .skip(limit * (page - 1))
+        .select("problem")
     ]);
+
+    const problems = todos
+      .map(todo => todo.problem?.toString())
+      .filter(Boolean);
+
+    const problemList = await Problem.find({ _id: { $in: problems } }).select("-description");
+
+    const interacted = await Submission.find(
+      { user: req.user.sub, problem: { $in: problemList.map((p) => p._id) } },
+      { problem: 1, status: 1 }
+    );
+
+    const solvedIds = new Set(interacted.filter((s) => s.status === "ACCEPTED").map((s) => s.problem.toString()));
+    const interactedIds = new Set(interacted.map((s) => s.problem.toString()));
+
+    const problemsWithStatus = problemList.map((problem) => {
+      return {
+        ...problem.toObject(),
+        status: solvedIds.has(problem._id.toString()) ? "SOLVED" : interactedIds.has(problem._id.toString()) ? "ATTEMPTED" : "UNSOLVED",
+      };
+    });
 
     return res.status(200).json({
       maxPage: Math.ceil(count / limit),
-      data: todos,
+      data: problemsWithStatus,
     });
+
   } catch (err) {
     return res.status(500).json({ message: err.message });
   }
