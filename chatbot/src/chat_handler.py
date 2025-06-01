@@ -122,6 +122,8 @@ async def ask_gemini_with_function_call(query: str, authorization=None, csrf_tok
             messages = []
             for chat in chat_history:
                 role = "user" if chat["sender"] == "user" else "model"
+                if role == "model" and "parts" not in chat:
+                    chat["parts"] = ""
                 messages.append({"role": role, "parts": [chat["parts"]]})
             messages.append(user_prompt)
         else:
