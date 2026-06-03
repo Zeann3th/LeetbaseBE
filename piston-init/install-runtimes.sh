@@ -15,4 +15,4 @@ for runtime in ${PISTON_RUNTIMES}; do
 done
 
 echo "Installed Piston runtimes:"
-node -e "fetch('${PISTON_URL}/api/v2/runtimes').then(r => r.json()).then(r => { console.log(r.map(x => `${x.language}@${x.version}`).join('\n')); })"
+node -e "fetch('${PISTON_URL}/api/v2/runtimes').then(r => r.json()).then(r => { console.log(r.map(x => x.language + '@' + x.version).join('\n')); })"
