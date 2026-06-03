@@ -12,16 +12,22 @@ This compose stack runs:
 - MailHog UI: `http://localhost:8025`
 - MinIO API: `http://localhost:9002`
 - MinIO Console: `http://localhost:9001`
-- Local JavaScript judge: `http://localhost:2000/api/v2/runtimes`
+- Self-hosted Piston: `http://localhost:2000/api/v2/runtimes`
+
+Compose also runs one-shot setup jobs:
+
+- `minio-init` creates the `CF_BUCKET` bucket if it does not exist.
+- `piston-init` installs Piston runtimes for `node`, `typescript`, `python`, `java`, `gcc`, and `go`.
 
 ## First Run
 
 ```bash
 docker compose up -d --build
-docker compose --profile seed run --rm seed
 ```
 
-The seed job clears and recreates local data in `MONGO_DB_NAME`, then uploads function declarations and code templates to MinIO.
+The first `docker compose up` can take several minutes because Piston runtimes are downloaded, installed, and demo data is seeded. Later runs reuse the `piston_packages`, `mongo_data`, and `minio_data` volumes.
+
+The seed job clears and recreates local data in `MONGO_DB_NAME`, then uploads function declarations and code templates to MinIO. The API waits for the seed job to complete successfully before starting.
 
 ## Seeded Login
 
@@ -67,14 +73,14 @@ Submissions call `PISTON_API_URL`.
 In Docker, `.env.docker` points it to:
 
 ```text
-PISTON_API_URL=http://judge:2000/api/v2
+PISTON_API_URL=http://piston:2000/api/v2
 ```
 
-The included local judge is intentionally small and supports JavaScript execution for the seeded JavaScript templates. JavaScript templates include assertions and print `Accepted` only after all tests pass.
+The Docker stack self-hosts the official Piston API. JavaScript templates include assertions and print `Accepted` only after all tests pass.
 
 The seed script also uploads runnable assertion harnesses for Python and TypeScript. C, C++, Java, and Go are seeded with starter compile wrappers and the correct `USER CODE HERE` markers, but their generated templates do not yet include full assertions because the current problem schema has no language-specific type metadata.
 
-To use a full external Piston service, change `PISTON_API_URL` in `.env.docker` to that service's API root and ensure the runtimes are installed.
+To install a different runtime set, edit `PISTON_RUNTIMES` in `docker-compose.yml`, then recreate `piston-init`.
 
 ## Common Commands
 
@@ -87,14 +93,15 @@ docker compose up -d --build
 Run or rerun seed data:
 
 ```bash
-docker compose --profile seed run --rm seed
+docker compose run --rm seed
 ```
 
 View logs:
 
 ```bash
 docker compose logs -f api
-docker compose logs -f judge
+docker compose logs -f piston
+docker compose logs -f piston-init
 docker compose logs -f chatbot
 ```
 
@@ -104,7 +111,7 @@ Stop services:
 docker compose down
 ```
 
-Stop services and remove local MongoDB/MinIO volumes:
+Stop services and remove local MongoDB/MinIO/Piston package volumes:
 
 ```bash
 docker compose down -v
@@ -124,7 +131,7 @@ Problems:
 curl "http://localhost:7554/v1/problems?limit=5"
 ```
 
-Judge runtimes:
+Piston runtimes:
 
 ```bash
 curl http://localhost:2000/api/v2/runtimes

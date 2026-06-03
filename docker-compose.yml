@@ -10,12 +10,14 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
       mailhog:
         condition: service_started
-      judge:
-        condition: service_started
+      piston-init:
+        condition: service_completed_successfully
+      seed:
+        condition: service_completed_successfully
     restart: unless-stopped
 
   chatbot:
@@ -42,10 +44,10 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
-        condition: service_healthy
-    profiles:
-      - seed
+      minio-init:
+        condition: service_completed_successfully
+      piston-init:
+        condition: service_completed_successfully
 
   mongo:
     image: mongo:7
@@ -96,13 +98,50 @@ services:
       retries: 10
     restart: unless-stopped
 
-  judge:
-    build:
-      context: ./judge
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    env_file:
+      - .env.docker
+    environment:
+      MINIO_ROOT_USER: abcdabcd
+      MINIO_ROOT_PASSWORD: abcdabcd
+    depends_on:
+      minio:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - |
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}"
+        mc mb --ignore-existing "local/$${CF_BUCKET}"
+
+  piston:
+    image: ghcr.io/engineer-man/piston
+    privileged: true
     ports:
       - "2000:2000"
+    volumes:
+      - piston_packages:/piston/packages
+    tmpfs:
+      - /tmp:exec
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:2000/api/v2/runtimes').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
     restart: unless-stopped
+
+  piston-init:
+    build:
+      context: ./piston-init
+    environment:
+      PISTON_URL: http://piston:2000
+      PISTON_RUNTIMES: node typescript python java gcc go
+    depends_on:
+      piston:
+        condition: service_healthy
 
 volumes:
   mongo_data:
   minio_data:
+  piston_packages:

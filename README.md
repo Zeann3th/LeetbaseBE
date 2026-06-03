@@ -55,12 +55,13 @@ npm start
 
 ## Chạy bằng Docker Compose
 
-Repo đã có cấu hình local đầy đủ cho API, chatbot, MongoDB, Redis, MailHog, MinIO và local JavaScript judge.
+Repo đã có cấu hình local/VPS đầy đủ cho API, chatbot, MongoDB, Redis, MailHog, MinIO và self-hosted Piston.
 
 ```bash
 docker compose up -d --build
-docker compose --profile seed run --rm seed
 ```
+
+Lần chạy đầu tiên sẽ tự tạo bucket MinIO, tự cài runtime Piston cho `node`, `typescript`, `python`, `java`, `gcc` và `go`, rồi seed dữ liệu demo, nên có thể mất vài phút.
 
 Các endpoint local:
 
@@ -68,9 +69,9 @@ Các endpoint local:
 - Chatbot: http://localhost:9000
 - MailHog UI: http://localhost:8025
 - MinIO console: http://localhost:9001
-- Local judge: http://localhost:2000/api/v2/runtimes
+- Piston: http://localhost:2000/api/v2/runtimes
 
-Seeder tạo 100 user, dữ liệu problem/discussion/comment/submission/todo/daily problem và template trong MinIO cho `javascript`, `typescript`, `python`, `java`, `c`, `cpp` và `go`. Local judge đi kèm chạy JavaScript; xem `RUNBOOK.md` để biết chi tiết các ngôn ngữ seeded.
+Seeder tạo 100 user, dữ liệu problem/discussion/comment/submission/todo/daily problem và template trong MinIO cho `javascript`, `typescript`, `python`, `java`, `c`, `cpp` và `go`. Xem `RUNBOOK.md` để biết chi tiết các ngôn ngữ seeded.
 
 Tài khoản admin seeded:
 
