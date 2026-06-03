@@ -6,7 +6,6 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
-import { ipLimiter } from './middlewares/ratelimit.js';
 import { v1Router, v2Router } from './routes/index.js';
 import mongoose from 'mongoose';
 import multer from 'multer';
@@ -44,8 +43,8 @@ app.get("/csrf-token", (req, res) => {
   res.status(200).json({ csrfToken });
 });
 
-app.use("/v1", ipLimiter, v1Router);
-app.use("/v2", ipLimiter, v2Router);
+app.use("/v1", v1Router);
+app.use("/v2", v2Router);
 
 app.use((err, req, res, next) => {
   if (err.name === "INVALID_FILE_TYPE") {
