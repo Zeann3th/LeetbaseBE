@@ -77,7 +77,7 @@ def add_problems_to_todo_api(
     headers = {
         "Authorization": authorization,
         "x-csrf-token": csrf_token,
-        "x-service-token": "fabc5c5ea0f6b4157b3bc8e23073add1e12024f4e089e5242c8d9950506b450e011b15487096787a0bd60d566fe7fd201269d1dee4ad46989d20b00f18abbbc0"
+        "x-service-token": os.getenv("SERVICE_TOKEN", "abcd")
     }
     print(problems)
     r = requests.post(url, headers=headers, json={"problems": problems})

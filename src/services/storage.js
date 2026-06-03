@@ -3,9 +3,11 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 class S3StorageService {
   constructor() {
+    const endpoint = process.env.S3_ENDPOINT || `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`;
     this.client = new S3Client({
-      region: "auto",
-      endpoint: `https://${process.env.CF_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+      region: process.env.S3_REGION || "auto",
+      endpoint,
+      forcePathStyle: process.env.S3_FORCE_PATH_STYLE === "true",
       credentials: {
         accessKeyId: process.env.CF_ACCESS_KEY_ID,
         secretAccessKey: process.env.CF_SECRET_ACCESS_KEY,
@@ -52,6 +54,5 @@ class S3StorageService {
 const s3 = new S3StorageService();
 
 export default s3;
-
 
 

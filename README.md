@@ -53,6 +53,33 @@ Sau đó, chạy lệnh sau để khởi động server:
 npm start
 ```
 
+## Chạy bằng Docker Compose
+
+Repo đã có cấu hình local đầy đủ cho API, chatbot, MongoDB, Redis, MailHog, MinIO và local JavaScript judge.
+
+```bash
+docker compose up -d --build
+docker compose --profile seed run --rm seed
+```
+
+Các endpoint local:
+
+- API: http://localhost:7554
+- Chatbot: http://localhost:9000
+- MailHog UI: http://localhost:8025
+- MinIO console: http://localhost:9001
+- Local judge: http://localhost:2000/api/v2/runtimes
+
+Seeder tạo 100 user, dữ liệu problem/discussion/comment/submission/todo/daily problem và template trong MinIO cho `javascript`, `typescript`, `python`, `java`, `c`, `cpp` và `go`. Local judge đi kèm chạy JavaScript; xem `RUNBOOK.md` để biết chi tiết các ngôn ngữ seeded.
+
+Tài khoản admin seeded:
+
+```text
+email: seedadmin@example.com
+username: seedadmin
+password: password123
+```
+
 ## Những đầu việc cần làm 
 
 - [x] Thiết kế cơ sở dữ liệu, tạo các model Mongoose
@@ -66,5 +93,3 @@ npm start
 - [x] (Tùy chọn) Thêm Oauth2 để đăng nhập bằng Google, Github 
 - [] (Tùy chọn) Thêm chức năng bảng xếp hạng tùy vào số bài đã làm, vào độ khó của bài tập 
 - [] (Tùy chọn) Thêm chức năng random bài theo ngày
-
-

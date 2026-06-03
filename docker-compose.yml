@@ -1,0 +1,108 @@
+services:
+  api:
+    build: .
+    env_file:
+      - .env.docker
+    ports:
+      - "7554:7554"
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+      judge:
+        condition: service_started
+    restart: unless-stopped
+
+  chatbot:
+    build:
+      context: ./chatbot
+    environment:
+      GOOGLE_API_KEY: abcd
+      BASE_URL: http://api:7554
+      SERVICE_TOKEN: abcd
+    ports:
+      - "9000:9000"
+    depends_on:
+      api:
+        condition: service_started
+    restart: unless-stopped
+
+  seed:
+    build: .
+    command: ["node", "scripts/seed.js"]
+    env_file:
+      - .env.docker
+    depends_on:
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    profiles:
+      - seed
+
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: ["server", "/data", "--console-address", ":9001"]
+    environment:
+      MINIO_ROOT_USER: abcdabcd
+      MINIO_ROOT_PASSWORD: abcdabcd
+    ports:
+      - "9002:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  judge:
+    build:
+      context: ./judge
+    ports:
+      - "2000:2000"
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+  minio_data:

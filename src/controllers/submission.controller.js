@@ -96,7 +96,7 @@ const create = async (req, res) => {
 
     const options = {
       method: 'POST',
-      url: 'https://emkc.org/api/v2/piston/execute',
+      url: `${process.env.PISTON_API_URL || "https://emkc.org/api/v2/piston"}/execute`,
       headers: {
         "Content-Type": "application/json"
       },
@@ -130,9 +130,10 @@ const create = async (req, res) => {
 
 const getLanguageVersion = async (language) => {
   try {
+    const baseUrl = process.env.PISTON_API_URL || "https://emkc.org/api/v2/piston";
     const options = {
       method: 'GET',
-      url: 'https://emkc.org/api/v2/piston/runtimes',
+      url: `${baseUrl}/runtimes`,
     };
     const { data } = await axios.request(options);
 
